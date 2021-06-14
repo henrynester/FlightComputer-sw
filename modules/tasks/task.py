@@ -2,19 +2,17 @@ from modules.mcl.system_state import SystemState
 
 
 class Task:
-    def __init__(self, name: str):
+    def __init__(self, name: str, state: SystemState):
         self.name = name
+        self.state = state
 
-    def initialize(self, state):
+    def sense(self):
         pass
 
-    def sense(self, state: SystemState):
+    def control(self):
         pass
 
-    def control(self, state: SystemState):
-        pass
-
-    def actuate(self, state: SystemState):
+    def actuate(self):
         pass
 
     def deinitialize(self):

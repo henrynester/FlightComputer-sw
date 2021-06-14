@@ -55,5 +55,4 @@ else:
                 GPIO.output(pin, bit)
 
         def deinitialize(self):
-            print('clean')
             GPIO.cleanup()

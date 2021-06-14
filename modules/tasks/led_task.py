@@ -19,24 +19,13 @@ from modules.drivers.led import LEDDriver, LEDColor
 
 
 class LEDTask(Task):
-    def __init__(self):
+    def __init__(self, state: SystemState):
         self.next_phase: Phase = None
         self.driver = LEDDriver()
-        super().__init__('LED')
+        super().__init__('LED', state)
 
-    def initialize(self, state):
-        pass
-
-    def sense(self, state):
-        pass
-
-    def control(self, state):
-        if (self.next_phase is not None):
-            state.phase = self.next_phase
-            self.next_phase = None
-
-    def actuate(self, state: SystemState):
-        print(state.phase)
+    def actuate(self):
+        print(self.state.phase)
         self.driver.color = LEDColor.RED
 
     def deinitialize(self):

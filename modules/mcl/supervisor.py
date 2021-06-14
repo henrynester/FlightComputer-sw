@@ -8,40 +8,35 @@ import time
 
 class Supervisor(Task):
     def __init__(self):
+        s = SystemState()
         self.tasks: [Task]
-        self.tasks = [PhaseTask(), LEDTask()]
-        self.system_state = SystemState()
+        self.tasks = [PhaseTask(s), LEDTask(s)]
         self.loop_delay = Config.run_options.loop_delay
-        super().__init__('Supervisor')
+        super().__init__('Supervisor', s)
 
-    def initialize(self, state):
+    def sense(self):
         for task in self.tasks:
-            task.initialize(state)
+            task.sense()
 
-    def sense(self, state):
+    def control(self):
         for task in self.tasks:
-            task.sense(state)
+            task.control()
 
-    def control(self, state):
+    def actuate(self):
         for task in self.tasks:
-            task.control(state)
-
-    def actuate(self, state):
-        for task in self.tasks:
-            task.actuate(state)
+            task.actuate()
 
     def deinitialize(self):
         for task in self.tasks:
             task.deinitialize()
 
     def run(self):
-        self.initialize(self.system_state)
         print('mcl start')
         try:
             while True:
-                self.sense(self.system_state)
-                self.control(self.system_state)
-                self.actuate(self.system_state)
+                self.sense()
+                self.control()
+                self.actuate()
                 if self.loop_delay > 0:
                     time.sleep(self.loop_delay)
         except KeyboardInterrupt:
