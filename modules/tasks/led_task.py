@@ -1,33 +1,31 @@
 from modules.tasks.task import Task
 from modules.mcl.system_state import SystemState, Phase
-import threading
-import modules.drivers.led
+# import threading
+from modules.drivers.led import LEDDriver, LEDColor
 
 
-class KeyboardThread(threading.Thread):
-    def __init__(self, input_cbk=None, name='keyboard-input-thread'):
-        self.input_cbk = input_cbk
-        super(KeyboardThread, self).__init__(name=name)
-        self.start()
+# class KeyboardThread(threading.Thread):
+#     def __init__(self, input_cbk=None, name='keyboard-input-thread'):
+#         self.input_cbk = input_cbk
+#         super(KeyboardThread, self).__init__(name=name)
+#         self.start()
 
-    def run(self):
-        while True:
-            try:
-                self.input_cbk(input())  # waits to get input + Return
-            except (EOFError):
-                return
+#     def run(self):
+#         while True:
+#             try:
+#                 self.input_cbk(input())  # waits to get input + Return
+#             except (EOFError):
+#                 return
 
 
 class LEDTask(Task):
     def __init__(self):
         self.next_phase: Phase = None
+        self.driver = LEDDriver()
         super().__init__('LED')
 
-    def my_callback(self, inp):
-        self.next_phase = Phase(int(inp))
-
     def initialize(self, state):
-        KeyboardThread(self.my_callback)
+        pass
 
     def sense(self, state):
         pass
@@ -39,4 +37,7 @@ class LEDTask(Task):
 
     def actuate(self, state: SystemState):
         print(state.phase)
-        pass
+        self.driver.color = LEDColor.RED
+
+    def deinitialize(self):
+        self.driver.deinitialize()

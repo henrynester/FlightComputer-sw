@@ -17,4 +17,5 @@ class Config:
         SHUTDOWN_START_TIME = 15.0
 
     class run_options:
-        desktop = True
+        desktop = False
+        loop_delay = 0.5

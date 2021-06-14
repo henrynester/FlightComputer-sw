@@ -8,11 +8,13 @@
 # we can test the code on a regular PC.
 
 from modules.mcl.supervisor import Supervisor
+# from modules.mcl.config import Config
 
 
 def main():
     mcl = Supervisor()
     mcl.run()
+    print('exiting main.py')
 
 
 if __name__ == '__main__':
