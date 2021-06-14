@@ -25,7 +25,7 @@ class LEDTask(Task):
         super().__init__('LED', state)
 
     def actuate(self):
-        print(self.state.phase)
+        # print(self.state.phase)
         self.driver.color = LEDColor.RED
 
     def deinitialize(self):

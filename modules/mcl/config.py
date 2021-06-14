@@ -16,6 +16,9 @@ class Config:
         BURN_START_TIME = 6.0
         SHUTDOWN_START_TIME = 15.0
 
+    class valves:
+        pass
+
     class run_options:
         desktop = False
         loop_delay = 0.5

@@ -1,28 +1,32 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from modules.mcl.config import Config
-from enum import IntEnum, IntFlag
-import struct
+import time
+# from modules.mcl.config import Config
+from enum import Enum, Flag
+from smbus import SMBus
 
 
-class AbstractValveDriver(ABC):
+class ValveBoardDriver():
     @dataclass
-    class ActuatorData:
-        goal_pos: int
+    class ActuatorData():
+        goal_pos: int = 0
 
     @dataclass
-    class SensorData:
-        pos: int
-        goal_pos: int
-        speed: int
-        current_dA: int
-        sensor_A1: int
-        sensor_A2: int
-        sensor_A3: int
-        limit_switch: bool
-        has_homed: bool
+    class SensorData():
+        pos: int = 0
+        goal_pos: int = 0
+        speed: int = 0
+        current_dA: int = 0
+        sensor_A1: int = 0
+        sensor_A2: int = 0
+        sensor_A3: int = 0
 
-        class Faults(IntFlag):
+        class Homing(Flag):
+            HOMING = 0
+            LIMIT_SWITCH = 1
+            HAS_HOMED = 2
+
+        class Faults(Flag):
+            OK = 0
             I2C_ERROR = 1
             DRV_FAILSAFE = 2
             OPEN_CIRCUIT = 4
@@ -31,12 +35,10 @@ class AbstractValveDriver(ABC):
             HOMING_TIMEOUT = 32
             LIMIT_SWITCH_STUCK = 64
 
-        faults: Faults
+        homing: Homing = Homing.HOMING
+        faults: Faults = Faults.OK
 
-    actuator_struct = struct.Struct('B')
-    sensor_struct = struct.Struct('B B b B H H H B B')
-
-    class Command(IntEnum):
+    class Command(Enum):
         SET_ACTUATOR_DATA = 0x01
         REQUEST_SENSOR_DATA = 0x02
 
@@ -45,39 +47,27 @@ class AbstractValveDriver(ABC):
         self.actuator_data = self.ActuatorData()
         self.sensor_data = self.SensorData()
 
-    @abstractmethod
+        self.i2c = SMBus(1)
+        # time.sleep(1) #SO said waiting after I2C init makes it work right
+
     def read(self):
-        pass
+        t0 = time.time()
+        rx = self.i2c.read_i2c_block_data(
+            self.address, self.Command.REQUEST_SENSOR_DATA.value, 12)
+        # print(time.time()-t0)
+        self.sensor_data.pos = rx[0]
+        self.sensor_data.goal_pos = rx[1]
+        self.sensor_data.speed = rx[2] - 128
+        self.sensor_data.current_dA = rx[3]
+        self.sensor_data.sensor_A1 = rx[4] * 256 + rx[5]
+        self.sensor_data.sensor_A1 = rx[6] * 256 + rx[7]
+        self.sensor_data.sensor_A1 = rx[8] * 256 + rx[9]
+        self.sensor_data.homing = self.SensorData.Homing(rx[10])
+        self.sensor_data.faults = self.SensorData.Faults(rx[11])
 
-    @abstractmethod
     def write(self):
-        pass
-
-
-if Config.run_options.desktop:
-    class ValveDriver(AbstractValveDriver):
-        def read(self):
-            pass
-
-        def write(self, data):
-            pass
-
-else:
-    from smbus import SMBus
-
-    class ValveDriver(AbstractValveDriver):
-        # I2C bus 0 is the bus used by the Pi to talk to PiHAT ROMs
-        # use I2C 1, which is free
-        def __init__(self, address):
-            self.i2c = SMBus(1)
-            super().__init__(self, address)
-
-        def read(self) -> AbstractValveDriver.SensorData:
-            rx_bytes = bytes(self.i2c.read_i2c_block_data(
-                self.address, self.Command.REQUEST_SENSOR_DATA, len=32))
-            return AbstractValveDriver.SensorData(
-                AbstractValveDriver.sensor_struct.unpack(rx_bytes))
-
-        def write(self, data: AbstractValveDriver.ActuatorData):
-            self.i2c.write_i2c_block_data(
-                self.address, self.Command.SET_ACTUATOR_DATA, [0xAB])
+        t0 = time.time()
+        tx_bytes = [self.actuator_data.goal_pos]
+        print(time.time()-t0)
+        self.i2c.write_i2c_block_data(
+            self.address, self.Command.SET_ACTUATOR_DATA.value, tx_bytes)
