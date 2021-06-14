@@ -48,26 +48,37 @@ class ValveBoardDriver():
         self.sensor_data = self.SensorData()
 
         self.i2c = SMBus(1)
-        # time.sleep(1) #SO said waiting after I2C init makes it work right
+        time.sleep(1)  # SO said waiting after I2C init makes it work right
 
     def read(self):
         t0 = time.time()
-        rx = self.i2c.read_i2c_block_data(
-            self.address, self.Command.REQUEST_SENSOR_DATA.value, 12)
-        # print(time.time()-t0)
-        self.sensor_data.pos = rx[0]
-        self.sensor_data.goal_pos = rx[1]
-        self.sensor_data.speed = rx[2] - 128
-        self.sensor_data.current_dA = rx[3]
-        self.sensor_data.sensor_A1 = rx[4] * 256 + rx[5]
-        self.sensor_data.sensor_A1 = rx[6] * 256 + rx[7]
-        self.sensor_data.sensor_A1 = rx[8] * 256 + rx[9]
-        self.sensor_data.homing = self.SensorData.Homing(rx[10])
-        self.sensor_data.faults = self.SensorData.Faults(rx[11])
+        rx = None
+        try:
+            rx = self.i2c.read_i2c_block_data(
+                self.address, self.Command.REQUEST_SENSOR_DATA.value, 12)
+        except OSError as e:
+            print('rx', e, time.time())
+        print(time.time()-t0)
+        if rx is not None:
+            # print(time.time()-t0)
+            self.sensor_data.pos = rx[0]
+            self.sensor_data.goal_pos = rx[1]
+            self.sensor_data.speed = rx[2] - 128
+            self.sensor_data.current_dA = rx[3]
+            self.sensor_data.sensor_A1 = rx[4] * 256 + rx[5]
+            self.sensor_data.sensor_A1 = rx[6] * 256 + rx[7]
+            self.sensor_data.sensor_A1 = rx[8] * 256 + rx[9]
+        # self.sensor_data.homing = self.SensorData.Homing(rx[10])
+        # self.sensor_data.faults = self.SensorData.Faults(rx[11])
 
     def write(self):
-        t0 = time.time()
         tx_bytes = [self.actuator_data.goal_pos]
-        print(time.time()-t0)
-        self.i2c.write_i2c_block_data(
-            self.address, self.Command.SET_ACTUATOR_DATA.value, tx_bytes)
+        t0 = time.time()
+
+        try:
+            self.i2c.write_i2c_block_data(
+                self.address, self.Command.SET_ACTUATOR_DATA.value, tx_bytes)
+        except OSError as e:
+            print('tx', e, time.time())
+
+        # print(time.time()-t0)

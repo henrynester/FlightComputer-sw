@@ -38,8 +38,8 @@ class Supervisor(Task):
                 self.sense()
                 self.control()
                 self.actuate()
-                if self.loop_delay > 0:
-                    time.sleep(self.loop_delay)
+                # if self.loop_delay > 0:
+                # time.sleep(0.005)
         except KeyboardInterrupt:
             self.deinitialize()
         print('mcl exit')
