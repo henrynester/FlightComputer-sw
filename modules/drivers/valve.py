@@ -58,8 +58,9 @@ class ValveBoardDriver():
                 self.address, self.Command.REQUEST_SENSOR_DATA.value, 12)
         except OSError as e:
             print('rx', e, time.time())
-        print(time.time()-t0)
+        # print(time.time()-t0)
         if rx is not None:
+            print(rx)
             # print(time.time()-t0)
             self.sensor_data.pos = rx[0]
             self.sensor_data.goal_pos = rx[1]
@@ -72,7 +73,7 @@ class ValveBoardDriver():
         # self.sensor_data.faults = self.SensorData.Faults(rx[11])
 
     def write(self):
-        tx_bytes = [self.actuator_data.goal_pos]
+        tx_bytes = [0xCC]
         t0 = time.time()
 
         try:
