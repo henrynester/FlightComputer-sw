@@ -1,21 +1,43 @@
-from dataclasses import dataclass
 # import time
 # from modules.mcl.config import Config
-from enum import Enum, Flag
-from modules.drivers.i2c import I2C
+from enum import Flag
+from modules.drivers.i2c import I2CBus, I2CInput, I2COutput
+import typing
 
 
-class ValveBoardDriver():
-    @dataclass
-    class ValveControlData():
+class ValveBoard():
+    def __init__(self, bus: I2CBus, addr: int):
+        self.addr = addr
+        self.bus = bus
+
+        self.valve_control = ValveBoard.ValveControlI2COutput(bus, addr)
+        self.valve_status = ValveBoard.ValveStatusI2CInput(bus, addr)
+        self.sensor = ValveBoard.SensorI2CInput(bus, addr)
+
+    def check_connected(self):
+        return all([self.valve_control.ok, self.valve_status.ok,
+                    self.sensor.ok])
+
+    def sync_all(self):
+        self.valve_control.sync_value()
+        self.valve_status.sync_value()
+        self.sensor.sync_value()
+
+    class ValveControlData(typing.NamedTuple):
         goal_pos: int = 0
 
-    @dataclass
-    class ValveStatusData():
-        pos: int = 0
-        goal_pos: int = 0
-        speed: int = 0
-        current_dA: int = 0
+    class ValveControlI2COutput(I2COutput[ValveControlData]):
+        def __init__(self, bus, addr):
+            super().__init__(bus, addr, 0x01)
+
+        def convert(self, data):
+            return [data.goal_pos]
+
+    class ValveStatusData(typing.NamedTuple):
+        pos: int
+        goal_pos: int
+        speed: int
+        current: float
 
         class Homing(Flag):
             HOMING = 0
@@ -35,64 +57,30 @@ class ValveBoardDriver():
         homing: Homing = Homing.HOMING
         faults: Faults = Faults.OK
 
-    @dataclass
-    class SensorData():
+    class ValveStatusI2CInput(I2CInput[ValveStatusData]):
+        def __init__(self, bus, addr):
+            super().__init__(bus, addr, 0x02, 6)
+
+        def convert(self, rx):
+            return ValveBoard.ValveStatusData(
+                pos=rx[0],
+                goal_pos=rx[1],
+                speed=rx[2] - 128,
+                current=rx[3] / 10,
+                homing=ValveBoard.ValveStatusData.Homing(rx[4]),
+                faults=ValveBoard.ValveStatusData.Faults(rx[5]))
+
+    class SensorData(typing.NamedTuple):
         sensor_A1: int = 0
         sensor_A2: int = 0
         sensor_A3: int = 0
 
-        CMD_VALVE_CONTROL = 0x01
-        CMD_VALVE_STATUS = 0x02
-        CMD_SENSOR = 0x03
+    class SensorI2CInput(I2CInput[SensorData]):
+        def __init__(self, bus, addr):
+            super().__init__(bus, addr, 0x03, 6)
 
-    def __init__(self, address: int, i2c: I2C):
-        self.address = address
-        self.i2c = i2c
-
-        self.valve_control = self.ValveControlData()
-        self.valve_status = self.ValveStatusData()
-        self.sensor = self.SensorData()
-
-    def read_status(self):
-        rx = self.i2c.read(self.address, self.Command.VALVE_STATUS.value, 6)
-        if rx is not None:
-            self.sensor_data.pos = rx[0]
-            self.sensor_data.goal_pos = rx[1]
-            self.sensor_data.speed = rx[2] - 128
-            self.sensor_data.current_dA = rx[3]
-            self.sensor_data.homing = self.SensorData.Homing(rx[4])
-            self.sensor_data.faults = self.SensorData.Faults(rx[5])
-
-    # def read(self):
-    #     t0 = time.time()
-    #     rx = None
-    #     try:
-    #         rx = self.i2c.read_i2c_block_data(
-    #             self.address, self.Command.REQUEST_SENSOR_DATA.value, 12)
-    #     except OSError as e:
-    #         print('rx', e, time.time())
-    #     # print(time.time()-t0)
-    #     if rx is not None:
-    #         print(rx)
-    #         # print(time.time()-t0)
-    #         self.sensor_data.pos = rx[0]
-    #         self.sensor_data.goal_pos = rx[1]
-    #         self.sensor_data.speed = rx[2] - 128
-    #         self.sensor_data.current_dA = rx[3]
-    #         self.sensor_data.sensor_A1 = rx[4] * 256 + rx[5]
-    #         self.sensor_data.sensor_A1 = rx[6] * 256 + rx[7]
-    #         self.sensor_data.sensor_A1 = rx[8] * 256 + rx[9]
-    #     # self.sensor_data.homing = self.SensorData.Homing(rx[10])
-    #     # self.sensor_data.faults = self.SensorData.Faults(rx[11])
-
-    # def write(self):
-    #     tx_bytes = [0xCC]
-    #     t0 = time.time()
-
-    #     try:
-    #         self.i2c.write_i2c_block_data(
-    #             self.address, self.Command.SET_ACTUATOR_DATA.value, tx_bytes)
-    #     except OSError as e:
-    #         print('tx', e, time.time())
-
-    #     # print(time.time()-t0)
+        def convert(self, rx):
+            return ValveBoard.SensorData(
+                sensor_A1=rx[0] + rx[1] * 256,
+                sensor_A2=rx[2] + rx[3] * 256,
+                sensor_A3=rx[4] + rx[5] * 256)

@@ -2,13 +2,15 @@ from smbus import SMBus
 import time
 
 i2c = SMBus(1)
-count = 0
 while True:
-    L = i2c.read_i2c_block_data(0x44, 0x03, 6)
-    print(count, L)
-    if L[0] != 0:
-        break
-    count += 1
+    t0 = time.time()
+    L = None
+    # try:
+    L = i2c.read_i2c_block_data(0x44, 0x02, 6)
+    # except OSError:
+    # print('err')
+    print(time.time()-t0, L)
+    time.sleep(0.001)
 
 # we learned:
 # i2c first byte reads as 128 sometimes, though arduino sends a 0

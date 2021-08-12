@@ -1,5 +1,5 @@
 from modules.tasks.task import Task
-from modules.mcl.system_state import SystemState, Phase
+from modules.mcl.system_state import SystemState, State
 # import threading
 from modules.drivers.led import LEDDriver, LEDColor
 
@@ -20,7 +20,7 @@ from modules.drivers.led import LEDDriver, LEDColor
 
 class LEDTask(Task):
     def __init__(self, state: SystemState):
-        self.next_phase: Phase = None
+        # self.next_phase: Phase = None
         self.driver = LEDDriver()
         super().__init__('LED', state)
 
